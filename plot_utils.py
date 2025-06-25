@@ -1,13 +1,14 @@
-import matplotlib.pyplot as plt
-from matplotlib.dates import DateFormatter
-import matplotlib.dates as mdates
-from matplotlib.patches import Patch
-from matplotlib.colors import ListedColormap
-import seaborn as sns
-import geopandas as gpd
 import contextily as ctx
-from shapely.geometry import Point
+import geopandas as gpd
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
+from matplotlib.colors import ListedColormap
+from matplotlib.dates import DateFormatter
+from matplotlib.patches import Patch
+from shapely.geometry import Point
+
 
 def plot_weather_correlation(df):
     df_numerical = df.drop(columns=['time'])
@@ -21,6 +22,7 @@ def plot_weather_correlation(df):
     plt.title('Feature Correlation Matrix')
     plt.tight_layout()
     plt.show()
+
 
 def plot_solar_supply_day(random_date, supply_hourly):
     mask = supply_hourly['time'].dt.date == random_date
@@ -40,6 +42,7 @@ def plot_solar_supply_day(random_date, supply_hourly):
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.show()
+
 
 def plot_solar_supply_whole(supply_hourly):
     df_sorted = supply_hourly.sort_values('time', ascending=True)
@@ -111,11 +114,13 @@ def plot_time_columns(full_data):
 
     plt.show()
 
+
 def plot_forecast_sanity_check(i, X_train, y_train, horizon):
-    plt.plot(X_train[i:i+horizon,0].cpu().numpy(), label=f"X_train[{i}:{i}+24]")
+    plt.plot(X_train[i:i + horizon, 0].cpu().numpy(), label=f"X_train[{i}:{i}+24]")
     plt.plot(y_train[i].cpu().numpy(), label=f"y_train[{i}]")
     plt.legend()
     plt.show()
+
 
 def plot_geographical_clusters(unique_locations):
     # Convert DataFrame to GeoDataFrame
@@ -135,12 +140,13 @@ def plot_geographical_clusters(unique_locations):
     gdf.plot(ax=ax, column='cluster', cmap=cmap, legend=False, markersize=30, alpha=0.9)
 
     # Add basemap
-    #ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
+    # ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron)
 
     # Add legend
     legend_elements = [Patch(facecolor=colors[i], label=f'Cluster {i}') for i in range(4)]
-    ax.legend(handles=legend_elements,title="Clusters",loc='upper center',bbox_to_anchor=(0.5, 0),ncol=4,frameon=False)
+    ax.legend(handles=legend_elements, title="Clusters", loc='upper center', bbox_to_anchor=(0.5, 0), ncol=4,
+              frameon=False)
 
     # Final touches
     ax.set_title("Clustered Geographical Points in and Around Germany")

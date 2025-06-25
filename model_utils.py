@@ -1,9 +1,10 @@
-import gpytorch
-import numpy as np
+import os
 import pickle
 import time
+
+import gpytorch
+import numpy as np
 import torch
-import os
 from gpytorch.kernels import RBFKernel, ScaleKernel, MaternKernel, PeriodicKernel
 from gpytorch.likelihoods import MultitaskGaussianLikelihood
 from gpytorch.means import ConstantMean, ZeroMean, LinearMean
@@ -13,16 +14,18 @@ from tqdm.notebook import tqdm
 
 def get_cov_kernel(name: str):
     kernel_builders = {'RBF': lambda L: ScaleKernel(RBFKernel(batch_shape=torch.Size([L])), batch_shape=[L]),
-        'Matern32_nu_2_5': lambda L: ScaleKernel(MaternKernel(nu=2.5, batch_shape=[L]), batch_shape=[L]),
-        'Matern32_nu_2_5+Periodic': lambda L: ScaleKernel(MaternKernel(nu=2.5, batch_shape=[L]),
-                                                          batch_shape=[L]) + ScaleKernel(
-            PeriodicKernel(batch_shape=[L]), batch_shape=[L]),
-        'RBFxPeriodic': lambda L: ScaleKernel(RBFKernel(batch_shape=torch.Size([L]))) * ScaleKernel(
-            PeriodicKernel(batch_shape=[L]), batch_shape=[L]),
-        'RBF+Periodic': lambda L: ScaleKernel(RBFKernel(batch_shape=torch.Size([L]))) + ScaleKernel(
-            PeriodicKernel(batch_shape=[L]), batch_shape=[L]), 'RBFxPeriodic+Matern_nu_2_5': lambda L: ScaleKernel(
-            RBFKernel(batch_shape=torch.Size([L])) * PeriodicKernel(batch_shape=[L]), batch_shape=[L]) + ScaleKernel(
-            MaternKernel(nu=2.5, batch_shape=[L]), batch_shape=[L]), }
+                       'Matern32_nu_2_5': lambda L: ScaleKernel(MaternKernel(nu=2.5, batch_shape=[L]), batch_shape=[L]),
+                       'Matern32_nu_2_5+Periodic': lambda L: ScaleKernel(MaternKernel(nu=2.5, batch_shape=[L]),
+                                                                         batch_shape=[L]) + ScaleKernel(
+                           PeriodicKernel(batch_shape=[L]), batch_shape=[L]),
+                       'RBFxPeriodic': lambda L: ScaleKernel(RBFKernel(batch_shape=torch.Size([L]))) * ScaleKernel(
+                           PeriodicKernel(batch_shape=[L]), batch_shape=[L]),
+                       'RBF+Periodic': lambda L: ScaleKernel(RBFKernel(batch_shape=torch.Size([L]))) + ScaleKernel(
+                           PeriodicKernel(batch_shape=[L]), batch_shape=[L]),
+                       'RBFxPeriodic+Matern_nu_2_5': lambda L: ScaleKernel(
+                           RBFKernel(batch_shape=torch.Size([L])) * PeriodicKernel(batch_shape=[L]),
+                           batch_shape=[L]) + ScaleKernel(
+                           MaternKernel(nu=2.5, batch_shape=[L]), batch_shape=[L]), }
     if name in kernel_builders:
         return kernel_builders[name]
     else:
@@ -31,8 +34,8 @@ def get_cov_kernel(name: str):
 
 def get_mean_kernel(name: str, input_size):
     mean_builders = {'Constant': lambda L: ConstantMean(batch_shape=torch.Size([L])),
-        'Zero': lambda L: ZeroMean(batch_shape=[L]),
-        'Linear': lambda L: LinearMean(input_size=input_size, batch_shape=[L]), }
+                     'Zero': lambda L: ZeroMean(batch_shape=[L]),
+                     'Linear': lambda L: LinearMean(input_size=input_size, batch_shape=[L]), }
     if name in mean_builders:
         return mean_builders[name]
     else:
@@ -51,14 +54,16 @@ class GPModel(gpytorch.models.ApproximateGP):
         # 1) variational distribution for each latent GP
         M = inducing_points.size(0)
         variational_distribution = gpytorch.variational.CholeskyVariationalDistribution(M,
-            batch_shape=torch.Size([num_latents]))
+                                                                                        batch_shape=torch.Size(
+                                                                                            [num_latents]))
         # 2) single‐task variational strategy, batched
         base_vs = gpytorch.variational.VariationalStrategy(self,
-            inducing_points.unsqueeze(0).expand(num_latents, M, -1), variational_distribution,
-            learn_inducing_locations=True)
+                                                           inducing_points.unsqueeze(0).expand(num_latents, M, -1),
+                                                           variational_distribution,
+                                                           learn_inducing_locations=True)
         # 3) mix latents → tasks
         variational_strategy = gpytorch.variational.LMCVariationalStrategy(base_vs, num_tasks, num_latents,
-            latent_dim=-1)
+                                                                           latent_dim=-1)
         super().__init__(variational_strategy)
 
         # plug in chosen mean & covar modules
@@ -210,7 +215,8 @@ def perform_gridsearch(cov_kernels, mean_kernels, inducing_list, latents_list, e
                                 X_tr, X_val = X_train[tr_idx], X_train[val_idx]
                                 y_tr, y_val = y_train[tr_idx], y_train[val_idx]
                                 rmse = train_and_eval(X_tr, y_tr, X_val, y_val, kbuilder, mbuilder, num_inducing,
-                                    num_latents, lr, epochs, GPModel, device, fold_i=fold_i, outer_pbar=fold_pbar)
+                                                      num_latents, lr, epochs, GPModel, device, fold_i=fold_i,
+                                                      outer_pbar=fold_pbar)
                                 fold_pbar.set_postfix(rmse=rmse)
                                 rmses.append(rmse)
                             fold_pbar.close()

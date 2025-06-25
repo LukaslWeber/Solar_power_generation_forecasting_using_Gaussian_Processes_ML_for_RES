@@ -1,10 +1,11 @@
+import calendar
+import gpytorch
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import torch, gpytorch, os, time, calendar
+import time
+import torch
 from sklearn.model_selection import KFold
 from tqdm import tqdm
-
 
 
 def load_and_merge_weather_data(paths):
@@ -31,7 +32,7 @@ def load_and_merge_weather_data(paths):
     dfs = []
     for path in paths:
         df = pd.read_csv(path, sep=',', decimal='.')
-        df['time'] = pd.to_datetime(df['time'], utc=True) # transforms date columns to the format: YYYY-MM-DD HH:MM:SS
+        df['time'] = pd.to_datetime(df['time'], utc=True)  # transforms date columns to the format: YYYY-MM-DD HH:MM:SS
         df = df.drop(columns=['forecast_origin', 'longitude', 'latitude'])
         # Average values column-wise as there are data points from different positions (long/lat) for each hour
         df = df.groupby('time', as_index=False).mean(numeric_only=True)
@@ -46,6 +47,7 @@ def load_and_merge_weather_data(paths):
     )
 
     return combined_df
+
 
 def parse_german_float(x: str) -> float:
     """Convert German-formatted number to float."""
@@ -238,9 +240,6 @@ def df_to_tensor(df, device):
     return torch.from_numpy(df.values).float().to(device)
 
 
-
-
-
 def train_and_eval(X_tr, y_tr, X_val, y_val,
                    kernel_builder, mean_builder,
                    num_inducing, num_latents, lr, num_epochs, GPModel, device, fold_i=None, outer_pbar=None):
@@ -270,7 +269,7 @@ def train_and_eval(X_tr, y_tr, X_val, y_val,
     inducing = X_tr[:num_inducing].clone()
 
     # build mean & covar modules (batched over num_latents)
-    mean_mod  = mean_builder(num_latents).to(device)
+    mean_mod = mean_builder(num_latents).to(device)
     covar_mod = kernel_builder(num_latents).to(device)
 
     # instantiate model + likelihood
@@ -305,13 +304,16 @@ def train_and_eval(X_tr, y_tr, X_val, y_val,
             outer_pbar.refresh()
 
     # eval
-    model.eval(); likelihood.eval()
+    model.eval();
+    likelihood.eval()
     with torch.no_grad():
         pred = likelihood(model(X_val)).mean.cpu()
-    rmse = torch.sqrt(((pred - y_val.cpu())**2).mean()).item()
+    rmse = torch.sqrt(((pred - y_val.cpu()) ** 2).mean()).item()
     return rmse
 
-def perform_gridsearch(kernel_builders, mean_builders, inducing_list, latents_list, epochs_list, lr_list, device, RANDOM_SEED, X_train, y_train, GPModel):
+
+def perform_gridsearch(kernel_builders, mean_builders, inducing_list, latents_list, epochs_list, lr_list, device,
+                       RANDOM_SEED, X_train, y_train, GPModel):
     kf = KFold(n_splits=3, shuffle=True, random_state=RANDOM_SEED)
     best = {'rmse': float('inf')}
 
@@ -363,7 +365,9 @@ def perform_gridsearch(kernel_builders, mean_builders, inducing_list, latents_li
                                 })
     return best
 
+
 def save_data(X_train, X_test, y_train, y_test, dates_train, dates_test, fpath):
-  d = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'dates_train': dates_train, 'dates_test': dates_test}
-  torch.save(d, fpath)
-  print("Datasets saved successfully")
+    d = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'dates_train': dates_train,
+         'dates_test': dates_test}
+    torch.save(d, fpath)
+    print("Datasets saved successfully")
